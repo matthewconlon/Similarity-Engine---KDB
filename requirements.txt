@@ -10,4 +10,5 @@ requests>=2.32.0
 tqdm>=4.66.0
 scipy>=1.13.0
 statsbombpy>=1.13.0
+streamlit>=1.63.0
 umap-learn>=0.5.6

@@ -1,248 +1,257 @@
 # Peak KDB Similarity Engine
 
-A production-quality Python project that builds an **archetype-based football similarity engine** inspired by the idea behind Manchester City's multi-metric replacement scouting workflow.
+A production-hardened Python project for building **archetype-based football similarity searches** from public StatsBomb event data.
 
-> **Core principle:** this project does **not** try to predict the "best" player.
-> It creates an archetype — **Peak Kevin De Bruyne** — and finds players whose statistical profiles are most similar in a multi-dimensional feature space.
+> **Core principle:** this project does **not** predict the "best" player.
+> It creates an archetype — such as **Peak Kevin De Bruyne**, **Peak Rodri**, **Peak Bernardo Silva**, or **Peak Jude Bellingham** — and finds the most similar player-season profiles in multi-dimensional feature space.
 
-## Project goals
+## What is included
 
-- Acquire public football event data from **StatsBomb Open Data**.
-- Engineer ~40 football performance metrics at player-season level.
-- Build a **Peak Kevin De Bruyne** profile using either:
-  - the best single season, or
-  - the average of his best 3 seasons.
-- Scale all features with `StandardScaler`.
-- Compare all players to the archetype using:
+- automated StatsBomb Open Data download
+- player-season feature engineering from event data
+- arbitrary-player archetype creation using:
+  - best season
+  - best three-season average
+- similarity scoring with:
   - cosine similarity
   - euclidean distance
   - mahalanobis distance
-- Explain **why** players are similar.
-- Produce hackathon-friendly visualisations and notebooks.
+- explainability outputs showing closest metrics and biggest gaps
+- visual outputs saved into `output/`
+  - PCA similarity map
+  - radar chart
+  - cluster diagram
+  - optional UMAP map when `umap-learn` is available
+- Streamlit app for interactive archetype search and filtering
 
 ## Repository structure
 
 ```text
 .
-├── data/
+├── app.py
 ├── notebooks/
 │   ├── 01_Data_Acquisition.ipynb
 │   ├── 02_Feature_Engineering.ipynb
 │   └── 03_Peak_KDB_Similarity.ipynb
-├── output/
 ├── src/
+│   ├── __init__.py
+│   ├── common.py
+│   ├── config.py
 │   ├── build_player_features.py
 │   ├── create_peak_kdb_profile.py
 │   ├── download_statsbomb_data.py
 │   ├── explainability.py
 │   ├── pca_visualisation.py
-│   └── similarity_engine.py
+│   ├── similarity_engine.py
+│   └── visualisations.py
+├── data/
+├── output/
 ├── README.md
 └── requirements.txt
 ```
-
-## Data source
-
-Primary source: **StatsBomb Open Data**.
-
-This project uses the public open-data repository structure published by StatsBomb / Hudl and downloads:
-- competitions
-- matches
-- lineups
-- events
-
-## Metrics engineered
-
-The pipeline generates event-derived player-season features across:
-
-### Passing
-- progressive passes
-- key passes
-- through balls
-- pass completion %
-- passes into final third
-- passes into penalty area
-- crosses
-- switches
-- total passes attempted/completed
-- pass length
-
-### Creativity
-- expected assists (`xA`, approximated from shot xG on assisted shots)
-- shot creating actions (approximated from pass/carry immediately preceding shot)
-- goal creating actions (approximated from pass/carry immediately preceding goal)
-- chances created
-- big chances created proxy (pass leading to high-xG shot)
-
-### Progression
-- progressive carries
-- carries into final third
-- carries into penalty area
-- total carries
-- carry distance
-
-### Attacking
-- goals
-- assists
-- shots
-- shots on target
-- xG
-
-### Possession
-- touches
-- ball recoveries
-- turnovers
-- dispossessions
-- miscontrols
-- fouls won
-
-### Defensive
-- pressures
-- tackles
-- interceptions
-- duels won proxy
-
-### Availability
-- minutes played
-- starts
-- matches played
-- age
-
-## Important methodological note
-
-Many commercial metrics are not directly available in open event data. Where needed, this project uses **transparent public approximations**:
-
-- **xA**: summed xG of shots that directly follow a player's pass.
-- **Shot Creating Actions**: player actions that directly precede a shot in the same possession chain approximation.
-- **Goal Creating Actions**: same approach for goals.
-- **Pressures**: based on StatsBomb pressure events.
-- **Progressive passes/carries**: based on distance-to-goal reduction thresholds.
-
-These approximations are documented in code comments and are intended for **education, prototyping, and hackathon use**.
 
 ## Installation
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate  # macOS / Linux
-# .venv\\Scripts\\activate   # Windows
-
+# .venv\Scripts\activate  # Windows
 pip install -r requirements.txt
 ```
 
-## End-to-end usage
+## Recommended CLI usage
+
+The scripts support both styles below:
+
+```bash
+python -m src.download_statsbomb_data --help
+python src/download_statsbomb_data.py --help
+```
+
+For the most reliable imports, prefer `python -m src.<module>`.
+
+## End-to-end pipeline
 
 ### 1) Download StatsBomb Open Data
 
 ```bash
-python src/download_statsbomb_data.py --output-dir data/raw
+python -m src.download_statsbomb_data \
+  --output-dir data/raw \
+  --limit-matches 250
 ```
 
 ### 2) Build player-season features
 
 ```bash
-python src/build_player_features.py \
+python -m src.build_player_features \
   --raw-dir data/raw \
   --output-file data/player_season_features.csv
 ```
 
-### 3) Create Peak KDB archetype
+### 3) Create an archetype profile
+
+Kevin De Bruyne example:
 
 ```bash
-python src/create_peak_kdb_profile.py \
+python -m src.create_peak_kdb_profile \
   --features-file data/player_season_features.csv \
   --output-file data/peak_kdb_profile.csv \
+  --player-name "Kevin De Bruyne" \
   --mode best_three_average
 ```
 
-Available modes:
-- `best_season`
-- `best_three_average`
-
-### 4) Run similarity engine
+Other players work the same way:
 
 ```bash
-python src/similarity_engine.py \
+python -m src.create_peak_kdb_profile \
+  --features-file data/player_season_features.csv \
+  --output-file data/peak_rodri_profile.csv \
+  --player-name "Rodri" \
+  --mode best_season
+```
+
+### 4) Run the similarity engine
+
+```bash
+python -m src.similarity_engine \
   --features-file data/player_season_features.csv \
   --profile-file data/peak_kdb_profile.csv \
   --metric cosine \
   --top-n 25 \
+  --min-minutes 900 \
+  --exclude-player-name "Kevin De Bruyne" \
   --output-file output/similarity_rankings.csv
 ```
 
-Available similarity metrics:
-- `cosine`
-- `euclidean`
-- `mahalanobis`
+Optional filters:
 
-### 5) Generate PCA visualisation
+- `--league <league>` (repeatable)
+- `--club <club>` (repeatable)
+- `--season <exact season label>`
+- `--min-minutes <minutes>`
+- `--exclude-player-name <player>`
+
+### 5) Generate explainability output
 
 ```bash
-python src/pca_visualisation.py \
+python -m src.explainability \
   --features-file data/player_season_features.csv \
   --profile-file data/peak_kdb_profile.csv \
   --rankings-file output/similarity_rankings.csv \
-  --output-plot output/pca_peak_kdb.png
+  --output-file output/player_explanations.csv
 ```
 
-## Notebook flow
+### 6) Generate visualisations
 
-The notebooks are built as a tutorial for a corporate data science hackathon:
+```bash
+python -m src.visualisations \
+  --features-file data/player_season_features.csv \
+  --profile-file data/peak_kdb_profile.csv \
+  --rankings-file output/similarity_rankings.csv \
+  --output-dir output
+```
 
-1. **01_Data_Acquisition.ipynb**
-   - data source overview
-   - automated download
-   - raw data inspection
+Outputs are created automatically under:
 
-2. **02_Feature_Engineering.ipynb**
-   - event cleaning
-   - player-season aggregation
-   - metric definitions
-   - per-90 transformations
+- `output/pca_plots/`
+- `output/radar_charts/`
+- `output/cluster_plots/`
+- `output/umap_plots/` (when UMAP is available)
 
-3. **03_Peak_KDB_Similarity.ipynb**
-   - build Peak KDB archetype
-   - scale features
-   - compute similarities
-   - PCA and explainability
-   - final section: **Same mathematics. Different domain.**
+## Streamlit app
 
-## Hackathon framing
+After generating `data/player_season_features.csv`, launch:
 
-This project should be presented with the message:
+```bash
+streamlit run app.py
+```
 
-> **Do not predict the best performer.**
-> Instead, create an archetype and find similar entities.
+The app lets you:
 
-### Same mathematics. Different domain.
+- select any player as the archetype source
+- choose archetype mode: best season or best three average
+- choose similarity metric: cosine, euclidean, or mahalanobis
+- filter candidate players by league, club, minimum minutes, and season
+- inspect top similar players and explainability output
+- display PCA, radar, cluster, and optional UMAP views
+- save outputs into `output/streamlit/`
 
-The same workflow can be reused outside football:
+## Engineered metrics
+
+The project builds a multi-metric profile spanning:
+
+- passing
+- creativity
+- progression
+- attacking
+- possession
+- defensive work
+- availability
+
+Representative examples include:
+
+- progressive passes
+- key passes
+- through balls
+- pass completion %
+- passes into final third
+- passes into penalty area
+- xA proxy
+- shot creating actions
+- progressive carries
+- goals and assists
+- ball recoveries
+- pressures, tackles, and interceptions
+- minutes played, starts, matches played, and age
+
+## Production hardening improvements
+
+Compared with the initial scaffold, the repository now includes:
+
+- shared configuration and utility modules under `src/`
+- stronger file and argument validation
+- output-directory creation in every writing step
+- logging support via `--verbose`
+- import paths that work for both package-style CLI usage and notebooks
+- exact `player_key` matching to avoid ambiguous explainability and plotting results for duplicated names
+- modular plotting helpers reusable by CLI scripts and the Streamlit app
+- graceful UMAP degradation when the optional dependency is unavailable
+
+## Notebook/tutorial framing
+
+The notebooks remain aligned to the same hackathon tutorial flow:
+
+1. data acquisition
+2. feature engineering
+3. archetype creation
+4. scaling and similarity scoring
+5. explainability
+6. visualisation
+7. **Same mathematics. Different domain.**
+
+## Notes and assumptions
+
+- StatsBomb Open Data coverage varies by competition and season.
+- Open event data does not expose every proprietary scouting metric, so the project uses transparent approximations where needed.
+- `xA`, shot-creating actions, and goal-creating actions are public-data approximations based on nearby actions and shot outcomes.
+- If `umap-learn` is not installed or importable, the rest of the project continues to run normally.
+
+## Same mathematics. Different domain.
+
+This workflow can be transferred beyond football:
+
 - wells
 - equipment
 - production assets
 - digital use cases
 
-The pattern is unchanged:
+The pattern stays the same:
+
 1. define a target archetype
 2. represent entities as vectors
-3. normalize the data
+3. normalise the data
 4. compute similarity in feature space
 5. explain the similarities and gaps
-
-## Notes and assumptions
-
-- StatsBomb Open Data does not cover every league and season uniformly.
-- The project is designed to be **modular**, so alternative public datasets can be added later.
-- Some player availability fields may be partially inferred from lineups/events.
-- Age is computed when birth date is available in lineup metadata; otherwise left missing and imputed conservatively.
-
-## Future extensions
-
-- Streamlit app for arbitrary archetypes
-- UMAP visualisation
-- role-based clustering
-- league filtering and minimum-minute thresholds
-- comparison against other archetypes such as Rodri, Bernardo Silva, Jude Bellingham
 
 ## License
 
