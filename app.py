@@ -14,13 +14,17 @@ from src.visualisations import generate_visualisations
 
 st.set_page_config(page_title="Football Archetype Similarity Engine", layout="wide")
 
+REPO_ROOT = Path(__file__).resolve().parent
 DEFAULT_FEATURES_PATH = Path("data/player_season_features.csv")
 DEFAULT_OUTPUT_DIR = Path("output/streamlit")
 
 
 @st.cache_data(show_spinner=False)
 def load_features(path_as_text: str) -> pd.DataFrame:
-    path = Path(path_as_text)
+    candidate_path = Path(path_as_text)
+    path = (REPO_ROOT / candidate_path).resolve() if not candidate_path.is_absolute() else candidate_path.resolve()
+    if REPO_ROOT not in path.parents and path != REPO_ROOT:
+        raise ValueError(f"Features file must be inside the repository: {REPO_ROOT}")
     if not path.exists():
         raise FileNotFoundError(
             f"Features file not found at {path}. Run src/build_player_features.py first or provide another path."
