@@ -9,10 +9,10 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
 try:
-    from src.common import attach_player_key, configure_logging, ensure_parent_dir, load_csv, validate_positive_int
+    from src.common import attach_player_key, configure_logging, ensure_parent_dir, fill_feature_nans, load_csv, validate_positive_int
     from src.config import DEFAULT_TOP_N, FEATURE_COLUMNS, FEATURE_LABELS
 except ImportError:
-    from common import attach_player_key, configure_logging, ensure_parent_dir, load_csv, validate_positive_int
+    from common import attach_player_key, configure_logging, ensure_parent_dir, fill_feature_nans, load_csv, validate_positive_int
     from config import DEFAULT_TOP_N, FEATURE_COLUMNS, FEATURE_LABELS
 
 
@@ -28,7 +28,7 @@ def create_explanations(
     archetype_rows = attach_player_key(archetype_df)
 
     combined = pd.concat([feature_rows.copy(), archetype_rows.copy()], ignore_index=True)
-    combined[FEATURE_COLUMNS] = combined[FEATURE_COLUMNS].fillna(combined[FEATURE_COLUMNS].median())
+    combined = fill_feature_nans(combined, FEATURE_COLUMNS)
     scaler = StandardScaler()
     scaled = scaler.fit_transform(combined[FEATURE_COLUMNS])
 

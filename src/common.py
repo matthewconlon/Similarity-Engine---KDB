@@ -57,6 +57,14 @@ def load_csv(path: Path, label: str) -> pd.DataFrame:
     return dataframe
 
 
+def fill_feature_nans(dataframe: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    frame = dataframe.copy()
+    frame[columns] = frame[columns].apply(pd.to_numeric, errors="coerce")
+    frame[columns] = frame[columns].fillna(frame[columns].median())
+    frame[columns] = frame[columns].fillna(0.0)
+    return frame
+
+
 def build_player_key(player_name: str, season: str, club: str) -> str:
     return " | ".join(str(value).strip() for value in (player_name, season, club))
 

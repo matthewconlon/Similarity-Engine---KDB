@@ -20,10 +20,10 @@ except ImportError:  # pragma: no cover - optional dependency path
     umap = None
 
 try:
-    from src.common import attach_player_key, configure_logging, ensure_directory, load_csv, slugify
+    from src.common import attach_player_key, configure_logging, ensure_directory, fill_feature_nans, load_csv, slugify
     from src.config import DEFAULT_TOP_N, FEATURE_COLUMNS, FEATURE_LABELS, RADAR_FEATURE_COLUMNS
 except ImportError:
-    from common import attach_player_key, configure_logging, ensure_directory, load_csv, slugify
+    from common import attach_player_key, configure_logging, ensure_directory, fill_feature_nans, load_csv, slugify
     from config import DEFAULT_TOP_N, FEATURE_COLUMNS, FEATURE_LABELS, RADAR_FEATURE_COLUMNS
 
 sns.set_theme(style="whitegrid")
@@ -39,7 +39,7 @@ def prepare_visualisation_frame(
     archetype = attach_player_key(archetype_df)
     rankings = attach_player_key(rankings_df)
     combined = pd.concat([features.copy(), archetype.copy()], ignore_index=True)
-    combined[FEATURE_COLUMNS] = combined[FEATURE_COLUMNS].fillna(combined[FEATURE_COLUMNS].median())
+    combined = fill_feature_nans(combined, FEATURE_COLUMNS)
 
     scaler = StandardScaler()
     scaled = scaler.fit_transform(combined[FEATURE_COLUMNS])
@@ -174,7 +174,8 @@ def build_radar_chart(
 
     scaler = MinMaxScaler()
     scaled_pool = pd.concat([features, archetype], ignore_index=True)
-    scaled_values = scaler.fit_transform(scaled_pool[RADAR_FEATURE_COLUMNS].fillna(scaled_pool[RADAR_FEATURE_COLUMNS].median()))
+    scaled_pool = fill_feature_nans(scaled_pool, RADAR_FEATURE_COLUMNS)
+    scaled_values = scaler.fit_transform(scaled_pool[RADAR_FEATURE_COLUMNS])
     scaled_pool = scaled_pool[["player_key", "player_name"] + RADAR_FEATURE_COLUMNS].copy()
     scaled_pool[RADAR_FEATURE_COLUMNS] = scaled_values
     radar_frame = scaled_pool[scaled_pool["player_key"].isin(comparison["player_key"])]

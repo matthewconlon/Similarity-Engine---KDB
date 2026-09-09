@@ -4,6 +4,7 @@ from __future__ import annotations
 
 DEFAULT_ARCHETYPE_PLAYER = "Kevin De Bruyne"
 DEFAULT_TOP_N = 25
+DEFAULT_FALLBACK_AGE = 27.0
 
 FEATURE_COLUMNS = [
     "progressive_passes_p90",

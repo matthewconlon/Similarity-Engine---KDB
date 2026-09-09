@@ -13,10 +13,10 @@ from sklearn.covariance import LedoitWolf
 from sklearn.preprocessing import StandardScaler
 
 try:
-    from src.common import attach_player_key, configure_logging, ensure_parent_dir, load_csv, normalise_filters, validate_non_negative_float, validate_positive_int
+    from src.common import attach_player_key, configure_logging, ensure_parent_dir, fill_feature_nans, load_csv, normalise_filters, validate_non_negative_float, validate_positive_int
     from src.config import DEFAULT_TOP_N, FEATURE_COLUMNS
 except ImportError:
-    from common import attach_player_key, configure_logging, ensure_parent_dir, load_csv, normalise_filters, validate_non_negative_float, validate_positive_int
+    from common import attach_player_key, configure_logging, ensure_parent_dir, fill_feature_nans, load_csv, normalise_filters, validate_non_negative_float, validate_positive_int
     from config import DEFAULT_TOP_N, FEATURE_COLUMNS
 
 VALID_METRICS = ["cosine", "euclidean", "mahalanobis"]
@@ -26,7 +26,7 @@ def prepare_feature_matrix(features_df: pd.DataFrame, archetype_df: pd.DataFrame
     features = attach_player_key(features_df)
     archetype = attach_player_key(archetype_df)
     combined = pd.concat([features.copy(), archetype.copy()], ignore_index=True)
-    combined[FEATURE_COLUMNS] = combined[FEATURE_COLUMNS].fillna(combined[FEATURE_COLUMNS].median())
+    combined = fill_feature_nans(combined, FEATURE_COLUMNS)
     scaler = StandardScaler()
     scaled = scaler.fit_transform(combined[FEATURE_COLUMNS])
     return combined, scaled, scaler

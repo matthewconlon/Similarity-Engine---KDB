@@ -13,10 +13,10 @@ import pandas as pd
 
 try:
     from src.common import attach_player_key, configure_logging, ensure_parent_dir, validate_existing_path
-    from src.config import FEATURE_COLUMNS
+    from src.config import DEFAULT_FALLBACK_AGE, FEATURE_COLUMNS
 except ImportError:
     from common import attach_player_key, configure_logging, ensure_parent_dir, validate_existing_path
-    from config import FEATURE_COLUMNS
+    from config import DEFAULT_FALLBACK_AGE, FEATURE_COLUMNS
 
 FINAL_THIRD_X = 80.0
 PENALTY_AREA_X = 102.0
@@ -221,7 +221,7 @@ def finalise_records(records: dict[tuple[str, str, str], dict[str, Any]]) -> pd.
 
     if "age" in features.columns:
         age_series = features["age"].dropna()
-        fallback_age = float(age_series.median()) if not age_series.empty else np.nan
+        fallback_age = float(age_series.median()) if not age_series.empty else DEFAULT_FALLBACK_AGE
         features["age"] = features["age"].fillna(fallback_age)
 
     for column in ["starts", "matches_played", "minutes_played"]:
