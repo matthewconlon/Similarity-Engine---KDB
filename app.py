@@ -15,19 +15,19 @@ from src.visualisations import generate_visualisations
 st.set_page_config(page_title="Football Archetype Similarity Engine", layout="wide")
 
 REPO_ROOT = Path(__file__).resolve().parent
+DATA_DIR = REPO_ROOT / "data"
 DEFAULT_FEATURES_PATH = Path("data/player_season_features.csv")
 DEFAULT_OUTPUT_DIR = Path("output/streamlit")
 
 
 @st.cache_data(show_spinner=False)
-def load_features(path_as_text: str) -> pd.DataFrame:
-    candidate_path = Path(path_as_text)
-    path = (REPO_ROOT / candidate_path).resolve() if not candidate_path.is_absolute() else candidate_path.resolve()
-    if REPO_ROOT not in path.parents and path != REPO_ROOT:
-        raise ValueError(f"Features file must be inside the repository: {REPO_ROOT}")
+def load_features(repo_relative_path: str) -> pd.DataFrame:
+    path = (REPO_ROOT / repo_relative_path).resolve()
+    if DATA_DIR not in path.parents:
+        raise ValueError(f"Features file must be inside {DATA_DIR}")
     if not path.exists():
         raise FileNotFoundError(
-            f"Features file not found at {path}. Run src/build_player_features.py first or provide another path."
+            f"Features file not found at {path}. Run src/build_player_features.py first to create a CSV under data/."
         )
     dataframe = pd.read_csv(path)
     if dataframe.empty:
@@ -37,6 +37,18 @@ def load_features(path_as_text: str) -> pd.DataFrame:
 
 def filter_options(dataframe: pd.DataFrame, column: str) -> list[str]:
     return sorted(value for value in dataframe[column].dropna().astype(str).unique().tolist() if value)
+
+
+def discover_feature_files() -> list[str]:
+    if not DATA_DIR.exists():
+        return [str(DEFAULT_FEATURES_PATH)]
+
+    csv_files = sorted(
+        path.relative_to(REPO_ROOT).as_posix()
+        for path in DATA_DIR.rglob("*.csv")
+        if path.is_file()
+    )
+    return csv_files or [str(DEFAULT_FEATURES_PATH)]
 
 
 def save_tables(output_dir: Path, slug: str, rankings: pd.DataFrame, explanations: pd.DataFrame) -> dict[str, Path]:
@@ -54,7 +66,10 @@ def main() -> None:
 
     with st.sidebar:
         st.header("Inputs")
-        features_path = st.text_input("Features CSV", str(DEFAULT_FEATURES_PATH))
+        feature_file_options = discover_feature_files()
+        default_file = str(DEFAULT_FEATURES_PATH)
+        default_index = feature_file_options.index(default_file) if default_file in feature_file_options else 0
+        features_path = st.selectbox("Features CSV", options=feature_file_options, index=default_index)
 
     try:
         features_df = load_features(features_path)
